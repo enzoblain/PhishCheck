@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SafeSend · phishcheck</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #14171f; --muted: #5b6475; --border: #e2e5eb;
+    --accent: #f0b90b; --accent-text: #14171f;
+    --green: #0f9d58; --green-bg: #e7f6ee; --orange: #c26a00; --orange-bg: #fff3e0;
+    --red: #d32f2f; --red-bg: #fdecec; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1116; --card: #171b22; --text: #e8ebf0; --muted: #9aa3b2; --border: #2a303b;
+      --green-bg: #12291e; --orange-bg: #2e2110; --red-bg: #321515;
+      --green: #4cc38a; --orange: #f0a040; --red: #ff6b6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; justify-content: space-between; align-items: center;
+    max-width: 560px; margin: 0 auto; padding: 20px 16px 8px; }
+  .logo { font-weight: 700; font-size: 18px; }
+  .logo span { color: var(--accent); }
+  main { max-width: 560px; margin: 0 auto; padding: 8px 16px 48px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input, select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font: inherit; }
+  input.mono { font-family: var(--mono); font-size: 13px; }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 11px 16px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button.danger { background: transparent; color: var(--red); border-color: var(--red); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .full { width: 100%; margin-top: 20px; }
+  details { margin-top: 14px; color: var(--muted); font-size: 13px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .err { color: var(--red); font-size: 13px; margin-top: 10px; min-height: 1em; }
+
+  dialog { border: none; border-radius: 18px; padding: 0; width: min(520px, calc(100vw - 32px));
+    background: var(--card); color: var(--text); }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  .dlg { padding: 22px; }
+  .verdict { border-radius: 12px; padding: 14px 16px; font-weight: 700; font-size: 17px; }
+  .verdict.green { background: var(--green-bg); color: var(--green); }
+  .verdict.orange { background: var(--orange-bg); color: var(--orange); }
+  .verdict.red { background: var(--red-bg); color: var(--red); }
+  .verdict small { display: block; font-weight: 500; font-size: 13px; color: var(--text); opacity: .85; margin-top: 2px; }
+  ul.findings { list-style: none; padding: 0; margin: 14px 0; }
+  ul.findings li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  ul.findings li:last-child { border-bottom: none; }
+  .addr { font-family: var(--mono); font-size: 12.5px; word-break: break-all; background: var(--bg);
+    border-radius: 8px; padding: 8px 10px; margin: 4px 0; }
+  .addr b { color: var(--accent); }
+  .addr .diff { background: var(--red); color: #fff; border-radius: 2px; }
+  .compare { margin: 12px 0; font-size: 13px; }
+  .ai { background: var(--bg); border-radius: 12px; padding: 12px 14px; font-size: 14px; white-space: pre-wrap; }
+  .ai.loading { color: var(--muted); font-style: italic; }
+  .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .actions button { flex: 1; min-width: 140px; }
+  .confirm { margin-top: 14px; font-size: 14px; }
+  .confirm label { color: var(--text); display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+  .confirm input[type=checkbox] { width: auto; margin-top: 4px; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .8s linear infinite; margin: 10px auto; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center { text-align: center; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Safe<span>Send</span> <small style="color:var(--muted);font-weight:500">· phishcheck</small></div>
+  <button id="connect">Connecter le wallet</button>
+</header>
+
+<main>
+  <div class="card">
+    <h1>Envoyer des fonds</h1>
+    <p class="sub">Chaque envoi est vérifié par <b>phishcheck</b> avant signature : adresses imitées, empoisonnement d'historique, adresses suspectes.</p>
+
+    <div class="row">
+      <div>
+        <label for="network">Réseau</label>
+        <select id="network">
+          <option value="bsc-mainnet">BNB Smart Chain</option>
+          <option value="bsc-testnet" selected>BSC Testnet</option>
+        </select>
+      </div>
+      <div>
+        <label for="token">Actif</label>
+        <select id="token"></select>
+      </div>
+    </div>
+
+    <label for="dest">Adresse de destination</label>
+    <input id="dest" class="mono" placeholder="0x…" autocomplete="off" spellcheck="false" />
+
+    <label for="amount">Montant</label>
+    <input id="amount" type="number" min="0" step="any" placeholder="0.0" />
+
+    <button id="send" class="primary full">Vérifier et envoyer</button>
+    <div class="err" id="err"></div>
+
+    <details>
+      <summary>Mode démo</summary>
+      <label for="asWallet">Analyser l'historique de ce wallet (par défaut : le wallet connecté)</label>
+      <input id="asWallet" class="mono" placeholder="0x… (optionnel)" spellcheck="false" />
+      <p class="hint">Permet de rejouer une vraie attaque mainnet : mets l'adresse d'une victime ici et l'adresse imitée en destination. L'analyse fonctionne sans wallet connecté ; seul l'envoi en a besoin.</p>
+    </details>
+  </div>
+</main>
+
+<dialog id="dlg"><div class="dlg" id="dlgBody"></div></dialog>
+
+<script type="module">
+import {
+  createWalletClient, custom, parseEther, parseUnits, erc20Abi, isAddress, getAddress,
+} from "https://esm.sh/viem@2.21.55";
+import { bsc, bscTestnet } from "https://esm.sh/viem@2.21.55/chains";
+
+const CHAINS = { "bsc-mainnet": bsc, "bsc-testnet": bscTestnet };
+const EXPLORER = { "bsc-mainnet": "https://bscscan.com", "bsc-testnet": "https://testnet.bscscan.com" };
+const TOKENS = {
+  "bsc-mainnet": [
+    { sym: "BNB", native: true },
+    { sym: "USDT", address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
+    { sym: "USDC", address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
+  ],
+  "bsc-testnet": [
+    { sym: "tBNB", native: true },
+    { sym: "U", address: "0xc70B8741B8B07A6d61E54fd4B20f22Fa648E5565", decimals: 18 },
+  ],
+};
+const LABEL = {
+  green: ["🟢 Adresse sûre", "Aucun signal d'alerte détecté."],
+  orange: ["🟠 Prudence", "Vérifie l'adresse complète avec le destinataire avant d'envoyer."],
+  red: ["🔴 Envoi déconseillé", "Cette adresse présente des signes d'arnaque. Ne l'envoie pas."],
+};
+
+const $ = (id) => document.getElementById(id);
+const dlg = $("dlg"), body = $("dlgBody");
+let account = null;
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+function fillTokens() {
+  $("token").innerHTML = TOKENS[$("network").value].map((t, i) => `<option value="${i}">${t.sym}</option>`).join("");
+}
+$("network").addEventListener("change", fillTokens);
+fillTokens();
+
+async function connect() {
+  if (!window.ethereum) throw new Error("Aucun wallet navigateur détecté (MetaMask, Rabby…).");
+  const [a] = await window.ethereum.request({ method: "eth_requestAccounts" });
+  account = getAddress(a);
+  $("connect").textContent = `${account.slice(0, 6)}…${account.slice(-4)}`;
+  return account;
+}
+$("connect").onclick = () => connect().catch((e) => ($("err").textContent = e.message));
+window.ethereum?.on?.("accountsChanged", (a) => { account = a[0] ? getAddress(a[0]) : null;
+  $("connect").textContent = account ? `${account.slice(0, 6)}…${account.slice(-4)}` : "Connecter le wallet"; });
+
+/** Address with first/last chars emphasised; optionally mark chars differing from `other`. */
+function fmtAddr(addr, other) {
+  const a = addr.toLowerCase(), o = other?.toLowerCase();
+  return [...a].map((c, i) => {
+    if (i < 2) return c;
+    const edge = i < 6 || i >= 38;
+    const diff = o && o[i] !== c;
+    if (diff) return `<span class="diff">${c}</span>`;
+    return edge ? `<b>${c}</b>` : c;
+  }).join("");
+}
+
+function showLoading(text) {
+  body.innerHTML = `<div class="spinner"></div><p class="center">${esc(text)}</p>`;
+  if (!dlg.open) dlg.showModal();
+}
+
+function showError(msg) {
+  body.innerHTML = `<div class="verdict red">Erreur<small>${esc(msg)}</small></div>
+    <div class="actions"><button id="close">Fermer</button></div>`;
+  $("close").onclick = () => dlg.close();
+}
+
+$("send").onclick = async () => {
+  $("err").textContent = "";
+  const network = $("network").value;
+  const token = TOKENS[network][+$("token").value];
+  const dest = $("dest").value.trim();
+  const amount = $("amount").value.trim();
+  if (!isAddress(dest, { strict: false })) return ($("err").textContent = "Adresse de destination invalide.");
+  if (!(Number(amount) > 0)) return ($("err").textContent = "Montant invalide.");
+  const asWallet = $("asWallet").value.trim() || account;
+  if (asWallet && !isAddress(asWallet, { strict: false })) return ($("err").textContent = "Adresse du mode démo invalide.");
+
+  showLoading("phishcheck analyse l'adresse onchain…");
+  let report;
+  try {
+    const r = await fetch("/api/check", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ destination: dest, wallet: asWallet || null, network }) });
+    report = await r.json();
+    if (!r.ok) throw new Error(report.error || "Analyse impossible");
+  } catch (e) { return showError(e.message); }
+
+  renderVerdict(report, { network, token, dest, amount });
+};
+
+function renderVerdict(report, tx) {
+  const v = report.verdict;
+  const [title, sub] = LABEL[v];
+  const lk = report.lookalike;
+  const compare = lk ? `
+    <div class="compare">
+      <div>Destination :</div><div class="addr">${fmtAddr(report.destination, lk.address)}</div>
+      <div>${lk.destIsGenuine ? "Copie piégée trouvée dans l'historique :" : "Adresse réelle de ton historique qu'elle imite :"}</div>
+      <div class="addr">${fmtAddr(lk.address, report.destination)}</div>
+    </div>` : `<div class="addr">${fmtAddr(report.destination)}</div>`;
+
+  const send = `Envoyer ${esc(tx.amount)} ${esc(tx.token.sym)}`;
+  let confirmBlock = "", actions = "";
+  if (v === "green") {
+    actions = `<button id="cancel">Annuler</button><button id="go" class="primary">${send}</button>`;
+  } else if (v === "orange") {
+    confirmBlock = `<div class="confirm"><label><input type="checkbox" id="ack" />
+      J'ai vérifié l'adresse complète, caractère par caractère, avec le destinataire par un autre canal.</label></div>`;
+    actions = `<button id="cancel" class="primary">Annuler</button><button id="go" disabled>${send} quand même</button>`;
+  } else {
+    const tail = report.destination.slice(-6);
+    confirmBlock = `<div class="confirm" id="redConfirm" hidden>
+      <p>Pour confirmer que tu as lu les risques, retape les <b>6 derniers caractères</b> de l'adresse de destination :</p>
+      <input id="retype" class="mono" placeholder="${"•".repeat(6)}" autocomplete="off" spellcheck="false" />
+      <p class="hint">Si les fonds partent vers une adresse d'attaquant, ils sont perdus définitivement.</p></div>`;
+    actions = `<button id="cancel" class="primary">Annuler (recommandé)</button><button id="unlock" class="danger">Je veux quand même envoyer</button>
+      <button id="go" class="danger" hidden disabled>${send} malgré le risque</button>`;
+    setTimeout(() => {
+      $("unlock").onclick = () => { $("redConfirm").hidden = false; $("unlock").hidden = true; $("go").hidden = false; $("retype").focus(); };
+      $("retype").oninput = (e) => { $("go").disabled = e.target.value.trim().toLowerCase() !== tail.toLowerCase(); };
+    });
+  }
+
+  body.innerHTML = `
+    <div class="verdict ${v}">${title}<small>${sub}</small></div>
+    ${compare}
+    <ul class="findings">${report.findings.map((f) => `<li>${({ green: "🟢", orange: "🟠", red: "🔴" })[f.level]} ${esc(f.text)}</li>`).join("")}</ul>
+    <div class="ai loading" id="ai">L'IA rédige une explication…</div>
+    ${confirmBlock}
+    <div class="actions">${actions}</div>`;
+
+  $("cancel").onclick = () => dlg.close();
+  if ($("ack")) $("ack").onchange = (e) => ($("go").disabled = !e.target.checked);
+  $("go").onclick = () => doSend(tx);
+
+  fetch("/api/explain", { method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ report, lang: "fr" }) })
+    .then((r) => r.json())
+    .then(({ text }) => {
+      const el = $("ai"); if (!el) return;
+      if (text) { el.classList.remove("loading"); el.textContent = text; } else el.remove();
+    })
+    .catch(() => $("ai")?.remove());
+}
+
+async function doSend({ network, token, dest, amount }) {
+  try {
+    const from = account ?? (await connect());
+    const chain = CHAINS[network];
+    const hexId = "0x" + chain.id.toString(16);
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hexId }] });
+    } catch (e) {
+      if (e.code !== 4902) throw e;
+      await window.ethereum.request({ method: "wallet_addEthereumChain", params: [{
+        chainId: hexId, chainName: chain.name, nativeCurrency: chain.nativeCurrency,
+        rpcUrls: [chain.rpcUrls.default.http[0]], blockExplorerUrls: [EXPLORER[network]] }] });
+    }
+    const client = createWalletClient({ account: from, chain, transport: custom(window.ethereum) });
+    showLoading("Confirme la transaction dans ton wallet…");
+    const to = getAddress(dest);
+    const hash = token.native
+      ? await client.sendTransaction({ to, value: parseEther(amount) })
+      : await client.writeContract({ address: token.address, abi: erc20Abi, functionName: "transfer",
+          args: [to, parseUnits(amount, token.decimals)] });
+    body.innerHTML = `<div class="verdict green">✅ Transaction envoyée
+      <small>${esc(amount)} ${esc(token.sym)} → ${esc(to.slice(0, 8))}…${esc(to.slice(-6))}</small></div>
+      <p><a href="${EXPLORER[network]}/tx/${hash}" target="_blank" rel="noopener">Voir sur BscScan ↗</a></p>
+      <div class="actions"><button id="close" class="primary">Fermer</button></div>`;
+    $("close").onclick = () => dlg.close();
+  } catch (e) {
+    showError(e.shortMessage || e.message);
+  }
+}
+</script>
+</body>
+</html>

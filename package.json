@@ -1,0 +1,8 @@
+{
+  "name": "phishcheck-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.24.0",
+  "scripts": {
+    "web": "cd app/agent && ./node_modules/.bin/tsx --env-file=../../.studio/.env.local ../../web/server.ts"
+  }
+}
