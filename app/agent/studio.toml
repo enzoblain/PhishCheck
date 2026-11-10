@@ -40,8 +40,8 @@ keystore_dir = "../../.studio/wallets"
 address = "0xecA2a4b49481E4770eEfb69F300490AEB4a017Ff"
 
 [llm]
-provider = "pieverse-llm"
-model = "auto/free"
+provider = "anthropic"
+model = "claude-haiku-5-5"
 
 [llm.pieverse]
 # Pieverse topup runs ONLY on BSC mainnet (chainId=56); decoupled from [network].default.
