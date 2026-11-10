@@ -28,6 +28,7 @@ destination = "platform"
 # Artifact channel: 'zip' (evm-local default — managed runtime, no Docker)
 # or 'container' (local Docker build → brokered ECR; forced for twak).
 platform_artifact = "zip"
+packaging = "zip"
 
 [wallet]
 # Local keystore signer. The Agent is the SOLE key-holder/signer.
@@ -38,6 +39,7 @@ signer = "local"
 keystore_dir = "../../.studio/wallets"
 # address = "0x..."   # filled by `bag wallet new`
 address = "0xecA2a4b49481E4770eEfb69F300490AEB4a017Ff"
+platform_exposed_addresses = ["0xecA2a4b49481E4770eEfb69F300490AEB4a017Ff"]
 
 [llm]
 provider = "anthropic"
@@ -93,3 +95,16 @@ auto_settle = false                            # opt-in: detect dispute-window-e
 # .studio/.env.local.
 kind = "local"
 
+[deploy.platform]
+terms_accepted_at = "2026-11-10T17:46:11Z"
+slug = "phishcheck"
+deployment_id = "01M73948KCXVA00M2WVTMNK87H"
+backend = "aws"
+agent_id = "01M73948KDYA6DRG7QKZXJVC58"
+invoke_url = "https://bnbagent-api.bnbchain.world/v1/rt/01M73948KDYA6DRG7QKZXJVC58/.well-known/agent-card.json"
+last_deploy_at = "2026-11-10T17:47:44Z"
+
+[identity]
+endpoint = "https://bnbagent-api.bnbchain.world/v1/rt/01M73948KDYA6DRG7QKZXJVC58/.well-known/agent-card.json"
+registered_at = "2026-11-10T17:48:10.748Z"
+agent_id = 2763
