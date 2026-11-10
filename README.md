@@ -7,6 +7,9 @@ built with [BNB Agent Studio](https://docs.bnbchain.org/developer-kit/bnbchain-s
 Give it a destination address, optionally with your own wallet, and it returns a
 🟢 / 🟠 / 🔴 verdict with plain-language reasons.
 
+- **Try it:** https://enzoblain.github.io/PhishCheck/ (SafeSend demo; checking needs no wallet)
+- **Deployed agent:** ERC-8004 agent ID **2763** on BSC testnet
+
 ## What it detects
 
 Address poisoning: an attacker generates an address that starts and ends like one of
@@ -40,7 +43,8 @@ The verdict is computed deterministically from on-chain data. The LLM only expla
 ```bash
 bag doctor          # readiness checks
 bag dev             # agent on :9000 (A2A card + /mcp)
-pnpm web            # SafeSend demo on http://localhost:5173
+pnpm web            # SafeSend demo on http://localhost:5173 (with the AI explanation)
+pnpm build:web      # rebuild web/phishcheck-core.js after editing phishcheckCore.ts
 ```
 
 In SafeSend, a 🟢 verdict sends directly. A 🟠 verdict requires confirming that you

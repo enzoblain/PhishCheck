@@ -126,6 +126,7 @@ import {
   createWalletClient, custom, parseEther, parseUnits, erc20Abi, isAddress, getAddress,
 } from "https://esm.sh/viem@2.21.55";
 import { bsc, bscTestnet } from "https://esm.sh/viem@2.21.55/chains";
+import { analyze } from "./phishcheck-core.js";
 
 const CHAINS = { "bsc-mainnet": bsc, "bsc-testnet": bscTestnet };
 const EXPLORER = { "bsc-mainnet": "https://bscscan.com", "bsc-testnet": "https://testnet.bscscan.com" };
@@ -206,11 +207,9 @@ $("send").onclick = async () => {
   showLoading("phishcheck analyse l'adresse onchain…");
   let report;
   try {
-    const r = await fetch("/api/check", { method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ destination: dest, wallet: asWallet || null, network }) });
-    report = await r.json();
-    if (!r.ok) throw new Error(report.error || "Analyse impossible");
-  } catch (e) { return showError(e.message); }
+    // Runs in the browser: same engine as the agent, direct public-RPC reads.
+    report = await analyze(dest, asWallet || null, network);
+  } catch (e) { return showError("Analyse impossible : " + e.message); }
 
   renderVerdict(report, { network, token, dest, amount });
 };
@@ -260,9 +259,11 @@ function renderVerdict(report, tx) {
   if ($("ack")) $("ack").onchange = (e) => ($("go").disabled = !e.target.checked);
   $("go").onclick = () => doSend(tx);
 
+  // AI explanation needs the local server (`pnpm web`, holds the LLM key).
+  // On the public static site this 404s and the block is simply removed.
   fetch("/api/explain", { method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ report, lang: "fr" }) })
-    .then((r) => r.json())
+    .then((r) => (r.ok ? r.json() : { text: null }))
     .then(({ text }) => {
       const el = $("ai"); if (!el) return;
       if (text) { el.classList.remove("loading"); el.textContent = text; } else el.remove();

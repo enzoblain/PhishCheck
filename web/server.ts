@@ -52,6 +52,12 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && req.url === "/phishcheck-core.js") {
+      res.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
+      res.end(await readFile(join(HERE, "phishcheck-core.js")));
+      return;
+    }
+
     if (req.method === "POST" && req.url === "/api/check") {
       const b = await body(req);
       const destination = String(b.destination ?? "");

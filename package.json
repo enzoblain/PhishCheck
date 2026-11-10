@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.24.0",
   "scripts": {
-    "web": "cd app/agent && ./node_modules/.bin/tsx --env-file=../../.studio/.env.local ../../web/server.ts"
+    "web": "cd app/agent && ./node_modules/.bin/tsx --env-file=../../.studio/.env.local ../../web/server.ts",
+    "build:web": "node -e \"require('child_process').execFileSync(require('fs').globSync('node_modules/.pnpm/esbuild@*/node_modules/esbuild/bin/esbuild')[0], ['app/agent/src/phishcheckCore.ts','--bundle','--format=esm','--target=es2020','--outfile=web/phishcheck-core.js'], {stdio:'inherit'})\""
   }
 }
